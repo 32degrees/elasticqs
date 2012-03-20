@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 
 /**
  * Hello world!
@@ -25,38 +26,44 @@ public class App
         ctx.refresh();
 
         Queue<String> testq = ctx.getBean("test-q", Queue.class);
+        BlockingQueue<String> testq2 = ctx.getBean("test-q2", BlockingQueue.class);
         RedisTemplate<String, String> redis = ctx.getBean(RedisTemplate.class);
 
         String foo = redis.opsForValue().get("foo");
         System.out.printf("%s\n", foo);
 
-        ListOperations<String,String> listOps = redis.opsForList();
+        //ListOperations<String,String> listOps = redis.opsForList();
 
         for (int i=0; i < 10; i++) {
-            Long count = testq.push(i + " " + System.currentTimeMillis());
-            System.out.printf("count after push #%s: %s\n", i, count);
+            String value = i + " " + System.currentTimeMillis();
+            Long count = testq.push(value);
+            System.out.printf("testq count after push #%s: %s\n", i, count);
+            testq2.add(value);
+            System.out.printf("testq2 count after push #%s: %s\n", i, testq2.size());
         }
 
         QueueListener<String> listener = new QueueListener<String>(testq, 2) {
             @Override
             public void received(String value) {
-                System.out.printf("popped: %s\n", value);
+                System.out.printf("testq popped: %s\n", value);
             }
         };
 
         new Thread(listener).start();
-/*        while (true) {
-            String val = redis.execute(new RedisCallback<String>() {
-                @Override
-                public String doInRedis(RedisConnection conn) throws DataAccessException {
-                    List<byte[]> value = conn.bRPop(2, "test-q".getBytes());
-                    if (value == null)
-                        return null;
-                    System.out.println(new String(value.get(0)));
-                    return new String(value.get(1));
-                }});
-            System.out.printf("popped: %s\n", val);
-            //val = listOps.rightPop("test-q");
-        }*/
+        new Thread(new Consumer(testq2)).start();
     }
+
+    static class Consumer implements Runnable {
+        private final BlockingQueue<String> queue;
+        Consumer(BlockingQueue<String> q) { queue = q; }
+        public void run() {
+            try {
+                while (true) { consume(queue.take()); }
+            } catch (InterruptedException ex) { ex.printStackTrace(); }
+        }
+        void consume(String value) {
+            System.out.printf("testq2 popped: %s\n", value);
+        }
+    }
+
 }

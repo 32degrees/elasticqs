@@ -6,6 +6,7 @@ import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.data.redis.support.collections.DefaultRedisList;
 
 @Configuration
 public class AppConfig {
@@ -36,4 +37,8 @@ public class AppConfig {
         return new Queue<String>("test-q", redisTemplate());
     }
 
+    @Bean(name = "test-q2")
+    public DefaultRedisList testQueue2() {
+        return new DefaultRedisList("test-q2", redisTemplate());
+    }
 }
