@@ -16,6 +16,10 @@ public abstract class QueueListener<T> implements Runnable {
     Queue<T> queue;
     int timeout;
 
+    public QueueListener(Queue<T> queue) {
+        this(queue, 0);
+    }
+
     public QueueListener(Queue<T> queue, int timeout) {
         this.queue = queue;
         this.timeout = timeout;

@@ -1,15 +1,9 @@
 package thirtytwo.degrees.elasticqs;
 
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.core.ListOperations;
-import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Hello world!
@@ -25,45 +19,49 @@ public class App
         //ctx.scan(App.class.getPackage().toString());
         ctx.refresh();
 
-        Queue<String> testq = ctx.getBean("test-q", Queue.class);
-        BlockingQueue<String> testq2 = ctx.getBean("test-q2", BlockingQueue.class);
-        RedisTemplate<String, String> redis = ctx.getBean(RedisTemplate.class);
+        final Queue<String> testq = ctx.getBean("test-q", Queue.class);
+        final AtomicLong count = new AtomicLong(0);
+        final Random random = new Random();
 
-        String foo = redis.opsForValue().get("foo");
-        System.out.printf("%s\n", foo);
+        Runnable producer = new Runnable() {
+            public void run() {
+                while (true) {
+                    String[] values = new String[3];
+                    for (int j=0; j < values.length; j++) {
+                        long i = count.getAndIncrement();
+                        values[j] = i + " " + System.currentTimeMillis();
+                    }
+                    Long size = testq.push(values);
+                    int delay = random.nextInt(800);
+                    System.out.printf("testq count after push #%s: %s, sleeping %s\n", count, size, delay);
+                    sleep(delay);
+                }
+            }};
 
-        //ListOperations<String,String> listOps = redis.opsForList();
+        new Thread(producer).start();
 
-        for (int i=0; i < 10; i++) {
-            String value = i + " " + System.currentTimeMillis();
-            Long count = testq.push(value);
-            System.out.printf("testq count after push #%s: %s\n", i, count);
-            testq2.add(value);
-            System.out.printf("testq2 count after push #%s: %s\n", i, testq2.size());
-        }
-
-        QueueListener<String> listener = new QueueListener<String>(testq, 2) {
-            @Override
-            public void received(String value) {
-                System.out.printf("testq popped: %s\n", value);
-            }
-        };
-
-        new Thread(listener).start();
-        new Thread(new Consumer(testq2)).start();
+        for (int i=0; i < 4; i++)
+            startListener(testq, i);
     }
 
-    static class Consumer implements Runnable {
-        private final BlockingQueue<String> queue;
-        Consumer(BlockingQueue<String> q) { queue = q; }
-        public void run() {
-            try {
-                while (true) { consume(queue.take()); }
-            } catch (InterruptedException ex) { ex.printStackTrace(); }
+    private static void sleep(int millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-        void consume(String value) {
-            System.out.printf("testq2 popped: %s\n", value);
-        }
+    }
+
+    private static QueueListener<String> startListener(final Queue<String> testq, final int id) {
+        QueueListener<String> listener = new QueueListener<String>(testq, 0) {
+            @Override
+            public void received(String value) {
+                System.out.printf("%s testq popped: %s\n", id, value);
+                sleep(400);
+            }
+        };
+        new Thread(listener).start();
+        return listener;
     }
 
 }
