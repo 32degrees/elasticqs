@@ -19,13 +19,6 @@ import java.util.HashMap;
 @Configuration
 public class AppConfig {
     @Bean
-    public SayHello sayHello() {
-        SayHello sayHello = new SayHello();
-        sayHello.setName("32degrees");
-        return sayHello;
-    }
-
-    @Bean
     public JedisConnectionFactory jedisConnectionFactory() {
         JedisConnectionFactory factory = new JedisConnectionFactory();
         factory.setUsePool(true);

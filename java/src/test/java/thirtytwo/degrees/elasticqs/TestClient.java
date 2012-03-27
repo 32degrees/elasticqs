@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Hello world!
  *
  */
-public class App 
+public class TestClient
 {
     static final Random random = new Random();
     public static void main( String[] args )
@@ -17,7 +17,7 @@ public class App
         //ApplicationContext ctx = new ClassPathXmlApplicationContext("applicationContext.xml");
         AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
         ctx.register(AppConfig.class);
-        //ctx.scan(App.class.getPackage().toString());
+        //ctx.scan(TestClient.class.getPackage().toString());
         ctx.refresh();
 
         final Queue<String> testq = ctx.getBean("test-q", Queue.class);
