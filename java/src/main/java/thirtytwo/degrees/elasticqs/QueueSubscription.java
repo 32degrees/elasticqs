@@ -12,15 +12,15 @@ import java.util.List;
  * Date: 3/20/12
  * Time: 10:16 AM
  */
-public abstract class QueueListener<T> implements Runnable {
+public abstract class QueueSubscription<T> implements Runnable {
     Queue<T> queue;
     int timeout;
 
-    public QueueListener(Queue<T> queue) {
+    public QueueSubscription(Queue<T> queue) {
         this(queue, 0);
     }
 
-    public QueueListener(Queue<T> queue, int timeout) {
+    public QueueSubscription(Queue<T> queue, int timeout) {
         this.queue = queue;
         this.timeout = timeout;
     }
@@ -35,9 +35,9 @@ public abstract class QueueListener<T> implements Runnable {
                         return null;
                     return (T) queue.redis.getValueSerializer().deserialize(value.get(1));
                 }});
-            received(val);
+            handle(val);
         }
     }
 
-    public abstract void received(T value);
+    public abstract void handle(T value);
 }

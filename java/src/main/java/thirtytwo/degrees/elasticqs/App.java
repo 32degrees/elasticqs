@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class App 
 {
+    static final Random random = new Random();
     public static void main( String[] args )
     {
         //ApplicationContext ctx = new ClassPathXmlApplicationContext("applicationContext.xml");
@@ -21,19 +22,21 @@ public class App
 
         final Queue<String> testq = ctx.getBean("test-q", Queue.class);
         final AtomicLong count = new AtomicLong(0);
-        final Random random = new Random();
 
         Runnable producer = new Runnable() {
             public void run() {
                 while (true) {
                     String[] values = new String[3];
                     for (int j=0; j < values.length; j++) {
-                        long i = count.getAndIncrement();
+                        long i = count.incrementAndGet();
+                        sendMsg(i, testq);
                         values[j] = i + " " + System.currentTimeMillis();
                     }
                     Long size = testq.push(values);
-                    int delay = random.nextInt(800);
+                    int delay = random.nextInt(2000);
                     System.out.printf("testq count after push #%s: %s, sleeping %s\n", count, size, delay);
+
+
                     sleep(delay);
                 }
             }};
@@ -44,6 +47,15 @@ public class App
             startListener(testq, i);
     }
 
+    private static void sendMsg(long count, Queue<String> testq) {
+        if (count % 7 == 0) {
+            testq.redis.convertAndSend("odd", count +" is divisible by 7");
+        }
+        if (count % 8 == 0) {
+            testq.redis.convertAndSend("even", count +" is divisible by 8");
+        }
+    }
+
     private static void sleep(int millis) {
         try {
             Thread.sleep(millis);
@@ -52,12 +64,12 @@ public class App
         }
     }
 
-    private static QueueListener<String> startListener(final Queue<String> testq, final int id) {
-        QueueListener<String> listener = new QueueListener<String>(testq, 0) {
+    private static QueueSubscription<String> startListener(final Queue<String> testq, final int id) {
+        QueueSubscription<String> listener = new QueueSubscription<String>(testq, 0) {
             @Override
-            public void received(String value) {
+            public void handle(String value) {
                 System.out.printf("%s testq popped: %s\n", id, value);
-                sleep(400);
+                sleep(random.nextInt(1000));
             }
         };
         new Thread(listener).start();
